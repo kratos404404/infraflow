@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+  namespace: infraflow
+data:
+  default.conf: |
+    server {
+        listen 80;
+        location / {
+            proxy_pass http://api-service:80;
+        }
+        location /status {
+            return 200 "OK";
+        }
+    }

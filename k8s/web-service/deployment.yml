@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-service
+  namespace: infraflow
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web-service
+  template:
+    metadata:
+      labels:
+        app: web-service
+    spec:
+      securityContext:
+        runAsNonRoot: true
+      containers:
+      - name: web
+        image: ghcr.io/kratos404404/infraflow/web-service:sha-abcdef  # le pipeline va mettre le bon tag
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            cpu: "100m"       # possibilité de mettre des limites plus strictes si on veut forcer l'optimisation,
+            memory: "128Mi"  #  ou plus laxistes si les images sont lourdes ou si la machine est lente
+          limits:
+            cpu: "500m"
+            memory: "256Mi"
+        livenessProbe:
+          httpGet:
+            path: /status
+            port: 80
+        readinessProbe:
+          httpGet:
+            path: /status
+            port: 80

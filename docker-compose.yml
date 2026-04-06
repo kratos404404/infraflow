@@ -1,0 +1,29 @@
+services:
+  api-service:
+    build: ./api-service
+    image: ghcr.io/${{ github.repository_owner }}/api-service:${{ github.sha }}
+    ports: ["8081:80"]
+    networks: [infraflow-net]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/get"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  web-service:
+    build: ./web-service
+    image: ghcr.io/${{ github.repository_owner }}/web-service:${{ github.sha }}
+    ports: ["8080:80"]
+    networks: [infraflow-net]
+    depends_on:
+      api-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/status"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+networks:
+  infraflow-net:
+    driver: bridge
