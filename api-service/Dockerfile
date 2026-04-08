@@ -3,7 +3,7 @@ FROM kennethreitz/httpbin:test
 USER root
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl \
+    && apt-get install -y --no-install-recommends curl=7.58.0-2ubuntu3.24 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
