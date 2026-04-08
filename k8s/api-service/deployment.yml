@@ -15,9 +15,12 @@ spec:
     spec:
       securityContext:
         runAsNonRoot: true
+        runAsUser: 65534
+      imagePullSecrets:
+        - name: ghcr-secret
       containers:
       - name: api
-        image: ghcr.io/kratos404404/infraflow/api-service:sha-abcdef  # le pipeline va mettre le bon tag
+        image: ghcr.io/kratos404404/api-service:latest  # le pipeline va mettre le bon tag
         ports:
         - containerPort: 80
         resources:

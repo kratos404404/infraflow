@@ -4,13 +4,35 @@ metadata:
   name: nginx-config
   namespace: infraflow
 data:
-  default.conf: |
-    server {
-        listen 80;
-        location / {
-            proxy_pass http://api-service:80;
-        }
-        location /status {
-            return 200 "OK";
+  nginx.conf: |
+    worker_processes auto;
+    # On déplace le PID là où on a les droits
+    pid /tmp/nginx.pid;
+
+    events {
+        worker_connections 1024;
+    }
+
+    http {
+        # On définit TOUS les chemins temporaires vers /tmp
+        client_body_temp_path /tmp/client_temp;
+        proxy_temp_path       /tmp/proxy_temp;
+        fastcgi_temp_path     /tmp/fastcgi_temp;
+        uwsgi_temp_path       /tmp/uwsgi_temp;
+        scgi_temp_path        /tmp/scgi_temp;
+
+        include       /etc/nginx/mime.types;
+        default_type  application/octet-stream;
+
+        server {
+            listen 8080;
+            
+            location / {
+                proxy_pass http://api-service:80;
+            }
+            
+            location /status {
+                return 200 "OK - InfraFlow is up\n";
+            }
         }
     }

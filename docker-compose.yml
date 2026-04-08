@@ -1,7 +1,7 @@
 services:
   api-service:
     build: ./api-service
-    image: ghcr.io/${{ github.repository_owner }}/api-service:${{ github.sha }}
+    image: ${REGISTRY}/api-service:${TAG}
     ports: ["8081:80"]
     networks: [infraflow-net]
     healthcheck:
@@ -12,14 +12,15 @@ services:
 
   web-service:
     build: ./web-service
-    image: ghcr.io/${{ github.repository_owner }}/web-service:${{ github.sha }}
-    ports: ["8080:80"]
+    image: ${REGISTRY}/web-service:${TAG}
+    ports: ["8080:8080"]
+    volumes: ["./web-service/nginx.conf:/etc/nginx/nginx.conf:ro"]
     networks: [infraflow-net]
     depends_on:
       api-service:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/status"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/status"]
       interval: 10s
       timeout: 5s
       retries: 3
