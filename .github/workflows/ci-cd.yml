@@ -7,60 +7,78 @@ on:
 
 jobs:
   lint-and-test:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Lint Dockerfiles & Bash
-        run: |
-          sudo apt-get install -y hadolint shellcheck
-          hadolint api-service/Dockerfile web-service/Dockerfile
-          shellcheck scripts/deploy.sh
 
-  build:
+      - name: Lint API Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: api-service/Dockerfile
+
+      - name: Lint Web Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: web-service/Dockerfile
+
+      - name: Lint Bash scripts
+        run: shellcheck scripts/*.sh
+
+  build-and-scan:
     needs: lint-and-test
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Build Docker images
-        run: |
-          docker build -t ghcr.io/${{ github.repository_owner }}/api-service:${{ github.sha }} ./api-service
-          docker build -t ghcr.io/${{ github.repository_owner }}/web-service:${{ github.sha }} ./web-service
 
-  security-scan:
-    needs: build
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-      - name: Scan with Trivy
+      # On build une seule fois ici pour pouvoir scanner les images locales
+      - name: Build local images for scanning
+        run: |
+          docker build -t api-service:${{ github.sha }} ./api-service
+          docker build -t web-service:${{ github.sha }} ./web-service
+
+      - name: Scan API Service
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: 'ghcr.io/${{ github.repository_owner }}/api-service:${{ github.sha }}'
+          image-ref: 'api-service:${{ github.sha }}'
           format: 'table'
-          exit-code: '1'
+          exit-code: '1' # Échoue le pipeline si une faille CRITICAL est trouvée
           severity: 'CRITICAL'
-      - name: Scan web-service
+
+      - name: Scan Web Service
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: 'ghcr.io/${{ github.repository_owner }}/web-service:${{ github.sha }}'
+          image-ref: 'web-service:${{ github.sha }}'
           format: 'table'
           exit-code: '1'
           severity: 'CRITICAL'
 
   push:
-    needs: security-scan
+    needs: build-and-scan
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Login to GHCR
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Push images
+
+      # Build final avec le tag GHCR et push
+      - name: Build and Push to GHCR
         run: |
-          docker build -t ghcr.io/${{ github.repository_owner }}/api-service:${{ github.sha }} ./api-service
-          docker build -t ghcr.io/${{ github.repository_owner }}/web-service:${{ github.sha }} ./web-service
-          docker push ghcr.io/${{ github.repository_owner }}/api-service:${{ github.sha }}
-          docker push ghcr.io/${{ github.repository_owner }}/web-service:${{ github.sha }}
+          REPO_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          
+          docker build -t ghcr.io/$REPO_LOWER/api-service:${{ github.sha }} ./api-service
+          docker build -t ghcr.io/$REPO_LOWER/web-service:${{ github.sha }} ./web-service
+          
+          docker push ghcr.io/$REPO_LOWER/api-service:${{ github.sha }}
+          docker push ghcr.io/$REPO_LOWER/web-service:${{ github.sha }}
+          
+          # Optionnel : Taguer aussi en "latest"
+          docker tag ghcr.io/$REPO_LOWER/api-service:${{ github.sha }} ghcr.io/$REPO_LOWER/api-service:latest
+          docker tag ghcr.io/$REPO_LOWER/web-service:${{ github.sha }} ghcr.io/$REPO_LOWER/web-service:latest
+          docker push ghcr.io/$REPO_LOWER/api-service:latest
+          docker push ghcr.io/$REPO_LOWER/web-service:latest
