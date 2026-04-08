@@ -1,41 +1,71 @@
 # InfraFlow - Test Technique DevOps (BOAZ-STUDY)
 
-## Prérequis
-- Docker + Docker Compose
-- minikube (ou kind)
-- kubectl
-- helm
+Ce projet déploie une architecture microservices sécurisée avec un pipeline CI/CD complet, un déploiement Kubernetes auto-scalable et un stack de monitoring (Prometheus/Grafana).
+## 🛠 Prérequis
 
-## Configuration a faire en local une fois les Prérequis Installé
-- Demander le fichier .env au responsable
+    - Docker & Docker Compose
 
-## Démarrage rapide
+    - Minikube (recommandé) ou un cluster Kubernetes local
 
-### Docker Compose
+    - kubectl, helm, envsubst (paquet gettext)
+
+## ⚙️ Configuration
+
+    Copiez le fichier d'exemple : 
 ```bash
-cp .env.example .env
-docker compose up -d
-curl http://localhost:8080/status
+    cp .env.example .env
 ```
 
+    Ajustez les variables dans le .env (notamment votre PAT GitHub et le REGISTRY).
 
-### Pour Kubernetes + Monitoring (Grafana)
+## 🚀 Démarrage Rapide
+### 1. Test Local (Docker Compose)
+
+    Idéal pour valider rapidement le fonctionnement des services.
+    Bash
+
 ```bash
+docker compose up -d
+# Test de l'API
+curl http://localhost:8081/get
+```
+
+### 2. Déploiement Kubernetes & Monitoring
+
+    Une seule commande déploie toute l'infrastructure (Namespace, Secrets, Services, HPA et Stack Monitoring).
+    Bash
+
+```bash
+# Lancement du cluster (si minikube)
 minikube start
+
+# Déploiement automatisé
 chmod +x scripts/deploy.sh
 ./scripts/deploy.sh
-
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-helm repo update
-helm install monitoring prometheus-community/kube-prometheus-stack --namespace monitoring --create-namespace
-
-kubectl port-forward svc/monitoring-grafana 3000:80 -n monitorings
 ```
 
-#### Post Execution
-- Apres ces execution de ces commandes vous allez pouvoir acceder au UI grafana via port 3000
-- D'ou on va vous demander le login et le password. Le login est *admin* et pour avoir password vous devez executer cette commande :
+## 📊 Monitoring & Observabilité
 
+    Le stack Prometheus + Grafana est installé automatiquement dans le namespace monitoring.
+
+Accès à Grafana
+
+### 1. Lancez le tunnel pour accéder à l'interface :
+```Bash
+kubectl port-forward svc/monitoring-grafana 3000:80 -n monitoring
+```
+
+### 2. Connectez-vous sur http://localhost:3000 :
+
+    - User : admin
+
+    - Password : (affiché à la fin du script deploy.sh) ou via :
 ```bash
-kubectl get secret --namespace monitoring monitoring-grafana -o jsonpath="{.data.admin-password}" | base64 --decode ; echo
+    kubectl get secret -n monitoring monitoring-grafana -o jsonpath="{.data.admin-password}" | base64 --decode ; echo
 ```
+
+## Validation du Test
+
+### 1. Dashboards : Importez l'ID 15760 et filtrez sur le namespace infraflow pour voir les métriques CPU/RAM.
+
+### 2. Alerting : Une règle d'alerte PodDown est configurée par défaut dans k8s/monitoring/alerts.yml.
