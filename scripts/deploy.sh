@@ -30,24 +30,43 @@ check_prerequisites() {
 }
 
 render_manifests() {
+    echo "📄 Application des manifestes Kubernetes..."
     local template_dir="k8s"
-    while IFS= read -r -d '' manifest; do
-        envsubst "${REGISTRY} ${TAG}" < "$manifest" | kubectl apply -f -
-    done < <(find "$template_dir" -type f -name '*.yml' -print0)
+    # On évite d'appliquer les fichiers de monitoring via envsubst s'ils n'en ont pas besoin
+    find "$template_dir" -type f -name '*.yml' -not -path "*/monitoring/*" -print0 | while IFS= read -r -d '' manifest; do
+        envsubst "\${REGISTRY} \${TAG}" < "$manifest" | kubectl apply -f -
+    done
+}
+
+deploy_monitoring() {
+    echo "📊 Installation du stack de monitoring (Helm)..."
+    # [cite: 75, 76]
+    helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+    helm repo update
+    
+    # Installation silencieuse avec timeout pour respecter les 5 mins 
+    helm upgrade --install monitoring prometheus-community/kube-prometheus-stack \
+      --namespace monitoring --create-namespace \
+      --wait --timeout 300s
+
+    # Application de ton alerte personnalisée [cite: 79]
+    if [[ -f "k8s/monitoring/alerts.yml" ]]; then
+        echo "🔔 Configuration des alertes Prometheus..."
+        kubectl apply -f k8s/monitoring/alerts.yml
+    fi
 }
 
 deploy_services() {
-    echo "🚀 Création du namespace infraflow..."
+    echo "🚀 Préparation du namespace infraflow..."
     kubectl create namespace infraflow --dry-run=client -o yaml | kubectl apply -f -
     
-    # Ajout automatique du secret (si les variables sont dans ton .env)
     kubectl create secret docker-registry ghcr-secret \
       --docker-server=ghcr.io \
       --docker-username="${REPO_OWNER}" \
       --docker-password="${PAT}" \
       -n infraflow --dry-run=client -o yaml | kubectl apply -f -
 
-    echo "🚀 Déploiement des manifestes..."
+    deploy_monitoring
     render_manifests
 }
 
@@ -60,8 +79,9 @@ wait_for_pods() {
 
 show_urls() {
     echo "🎉 Déploiement terminé !"
-    echo "🌐 Web-service : $(minikube service web-service -n infraflow --url 2>/dev/null || echo 'utilise kubectl port-forward')"
-    echo "📊 Grafana : http://localhost:3000"
+    echo "🌐 Web-service : $(minikube service web-service -n infraflow --url 2>/dev/null || echo 'kubectl port-forward svc/web-service 80:80 -n infraflow')"
+    echo "📊 Grafana      : kubectl port-forward svc/monitoring-grafana 3000:80 -n monitoring"
+    echo "🔑 Password Grafana : admin / $(kubectl get secret --namespace monitoring monitoring-grafana -o jsonpath='{.data.admin-password}' | base64 --decode)"
 }
 
 main() {

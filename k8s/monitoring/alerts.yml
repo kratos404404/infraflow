@@ -1,0 +1,20 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: infraflow-alerts
+  namespace: monitoring
+  labels:
+    app: kube-prometheus-stack
+    release: monitoring
+spec:
+  groups:
+  - name: infraflow.rules
+    rules:
+    - alert: PodDown
+      expr: up{namespace="infraflow"} == 0
+      for: 1m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Pod {{ $labels.pod }} est hors service"
+        description: "Le pod {{ $labels.pod }} dans le namespace infraflow ne répond plus depuis plus d'une minute."
