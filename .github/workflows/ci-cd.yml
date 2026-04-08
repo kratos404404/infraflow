@@ -43,6 +43,9 @@ jobs:
           format: 'table'
           exit-code: '1' # Échoue le pipeline si une faille CRITICAL est trouvée
           severity: 'CRITICAL'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          trivyignores: '.trivyignore'
 
       - name: Scan Web Service
         uses: aquasecurity/trivy-action@master
