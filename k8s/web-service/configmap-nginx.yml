@@ -28,7 +28,7 @@ data:
             listen 8080;
             
             location / {
-                proxy_pass http://api-service:80;
+                proxy_pass http://api-service:8080;
             }
             
             location /status {

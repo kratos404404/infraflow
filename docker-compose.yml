@@ -2,7 +2,7 @@ services:
   api-service:
     build: ./api-service
     image: ${REGISTRY}/api-service:${TAG}
-    ports: ["8081:80"]
+    ports: ["8081:8080"]
     networks: [infraflow-net]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/get"]
