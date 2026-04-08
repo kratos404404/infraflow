@@ -53,8 +53,6 @@ jobs:
           format: 'table'
           exit-code: '1'
           severity: 'CRITICAL'
-          ignore-unfixed: true
-          vuln-type: 'os,library'
 
   push:
     needs: build-and-scan
