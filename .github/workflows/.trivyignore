@@ -1,8 +1,0 @@
-# .trivyignore
-# Low-risk / not exploitable in our httpbin + gunicorn container
-
-# SQLite integer overflow - requires raw SQL with huge ORDER BY (not possible here)
-CVE-2025-7458
-
-# zlib MiniZip vulnerability - Debian will_not_fix, and we don't use zip creation features
-CVE-2023-45853
