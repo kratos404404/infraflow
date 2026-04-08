@@ -10,6 +10,7 @@ load_environment() {
     fi
 
     set -o allexport
+    # shellcheck source=/dev/null
     source "$env_file"
     set +o allexport
 
@@ -31,6 +32,7 @@ check_prerequisites() {
 render_manifests() {
     local template_dir="k8s"
     while IFS= read -r -d '' manifest; do
+        # shellcheck disable=SC2016
         envsubst '${REGISTRY} ${TAG}' < "$manifest" | kubectl apply -f -
     done < <(find "$template_dir" -type f -name '*.yml' -print0)
 }
